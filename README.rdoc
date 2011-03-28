@@ -68,20 +68,20 @@ Varying the Algorithm with the Template Method
 
 ==== Example
 
-  physic = Users::Physic.new('Google', 'http://google.com') 
-  physic.description
+  > physic = Users::Physic.new('Google', 'http://google.com') 
+  > physic.description
 
-  #== 'Google [http://google.com] (Users::Physic)'
+  > 'Google [http://google.com] (Users::Physic)'
 
-  juristic = Users::Juristic.new('Yandex', 'Yandex Inc') 
-  juristic.description
+  => juristic = Users::Juristic.new('Yandex', 'Yandex Inc') 
+  => juristic.description
 
-  #== 'Yandex [Yandex Inc] (Users::Juristic)'
+  > 'Yandex [Yandex Inc] (Users::Juristic)'
 
-  abstract_user = Users::Base.new
-  abstract_user.description
+  => abstract_user = Users::Base.new
+  => abstract_user.description
 
-  #== 'abstract name (Users::Base)'
+  > 'abstract name (Users::Base)'
 
 == Strategy (Шаблонный Метод)
 
@@ -151,11 +151,11 @@ Replacing the Algorithm with the Strategy
 
 ==== Example
 
-  user = Users::Base.new('username', HTMLFormatter.new)
-  user.report
+  > user = Users::Base.new('username', HTMLFormatter.new)
+  > user.report
 
-  user = Users::Base.new('username', PlainTextFormatter.new)
-  user.report
+  > user = Users::Base.new('username', PlainTextFormatter.new)
+  > user.report
 
 === Good code (Ruby way)
 
@@ -172,25 +172,130 @@ Replacing the Algorithm with the Strategy
 
 ==== Example
 
-  PLAIN_TEXT_FORMATTER = lambda do |context|
-    puts '<plain text>'
-    puts context.name
-    puts '<plain text>'
+  > PLAIN_TEXT_FORMATTER = lambda do |context|
+  >   puts '<plain text>'
+  >   puts context.name
+  >   puts '<plain text>'
+  > end
+
+  > HTML_FORMATTER = lambda do |context|
+  >   puts '<html>'
+  >   puts '<head>'
+  >   puts '</head>'
+  >   puts '<body>'
+  >   puts context.name
+  >   puts '</body>'
+  >   puts '</html>'
+  > end
+
+  > user = Users::Base.new('username', PLAIN_TEXT_FORMATTER)
+  > user.report
+
+  > user = Users::Base.new('username', HTML_FORMATTER)
+  > user.report
+
+== Observer
+
+Keeping Up with the Times with the Observer
+
+=== Not good code 
+  
+  class Users::Base
+    attr_reader :payment
+
+    def initialize name, payment, payment_notification
+      @name = name
+      @payment = payment
+      @payment_notification = payment_notification
+    end
+
+    def payment= new_payment
+      @payment = new_payment
+      payment_notification.update(self)
+    end
   end
 
-  HTML_FORMATTER = lambda do |context|
-    puts '<html>'
-    puts '<head>'
-    puts '</head>'
-    puts '<body>'
-    puts context.name
-    puts '</body>'
-    puts '</html>'
+  class PaymentNotification
+    def update
+      puts "#{self.name} payment updated to #{self.payment}"
+    end
   end
 
-  user = Users::Base.new('username', PLAIN_TEXT_FORMATTER)
-  user.report
+=== Good code
 
-  user = Users::Base.new('username', HTML_FORMATTER)
-  user.report
+  module Observers
+    def initialize
+      @observers=[]
+    end
+    
+    def add_observer &observer
+      @observers << observer
+    end
+    
+    def delete_observer observer
+      @observers.delete(observer)
+    end
+    
+    def notify_observers
+      @observers.each do |observer|
+        observer.call(self)
+      end
+    end
+  end
 
+  class Users::Base
+    include Observers
+    attr_reader :payment
+
+    def initialize name, payment
+      super()
+      @name = name
+      @payment = payment
+    end
+
+    def payment= new_payment
+      @payment = new_payment
+      notify_observers
+    end
+  end
+
+==== Example
+
+  > user = Users::Base.new('username', 35000)
+  > user.add_observer do |changed_user|
+  >   puts "#{changed_user.name} payment updated to #{changed_user.payment}" 
+  > end
+  
+  > user.payment = 40000
+  => 'username payment updated to 40000'
+
+=== Good code (Rails way)
+
+  class Users::Base < ActiveRecord
+    attr_accessor :payment
+
+    def initialize name, payment
+      super()
+      @name = name
+      @payment = payment
+    end
+
+    def payment= new_payment
+      @payment = new_payment
+      notify_observers
+    end
+  end
+
+  class NotificationObserver < ActiveRecord::Observer
+    observe Users::Base
+    
+    def after_update(user)
+      puts "#{user.name} updated"
+    end
+  end
+
+==== Example
+ 
+  > user = Users::Base.new('username', 30000)
+  > user.payment = 45000
+  => 'username updated'
