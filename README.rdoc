@@ -1,0 +1,196 @@
+**Draft 
+
+= Паттерны проектирования
+
+== Template Method (Шаблонный Метод)
+
+Varying the Algorithm with the Template Method
+Варирование алгоритма с помощью Шаблонного Метода
+
+
+=== Bad
+
+class Users::Physic < Users::Base
+  def initialize name, website
+    @name = name
+    @website = website
+  end
+
+  def description
+    puts("#{@name} [#{@website}] (#{class.to_s})")
+  end
+end
+
+class Users::Juristic < Users::Base
+  def initialize name, company
+    @name = name
+    @company = company
+  end
+
+  def description
+    puts("#{@name} [#{@company}] (#{class.to_s})")
+  end
+end
+
+=== Good
+
+class Users::Base
+  def description
+    puts("#{printable_name} (#{class.to_s})")
+  end
+
+  def printable_name
+    'abstract name'
+  end
+end
+
+class Users::Physic < Users::Base
+  def initialize name, website
+    @name = name
+    @website = website
+  end
+
+  def printable_name
+    "#{@name} [#{@website}]"
+  end
+end
+
+class Users::Juristic < Users::Base
+  def initialize name, company
+    @name = name
+    @company = company
+  end
+
+  def printable_name
+    "#{@name} [#{@company}]"
+  end
+end
+
+=== Example
+
+physic = Users::Physic.new('Google', 'http://google.com') 
+physic.description
+
+#== 'Google [http://google.com] (Users::Physic)'
+
+juristic = Users::Juristic.new('Yandex', 'Yandex Inc') 
+juristic.description
+
+#== 'Yandex [Yandex Inc] (Users::Juristic)'
+
+abstract_user = Users::Base.new
+abstract_user.description
+
+#== 'abstract name (Users::Base)'
+
+== Strategy (Шаблонный Метод)
+
+Replacing the Algorithm with the Strategy
+Замена Алгоритма с помощью Стратегии
+
+=== Bad code
+
+class Users::Base
+  def description
+    'It's a description of Users::Base'
+  end
+end
+
+class PlainTextFormatter
+  def report text
+    puts '<plain text>'
+    puts text
+    puts '<plain text>'
+  end
+end
+
+class HTMLFormatter
+  def report text
+    puts '<html>'
+    puts '<head>'
+    puts '</head>'
+    puts '<body>'
+    puts text
+    puts '</body>'
+    puts '</html>'
+  end
+end
+
+=== Good code
+
+class Users::Base
+  def initialize name, formatter
+    @name = name
+    @formatter = formatter
+  end
+
+  def report
+    fomatter.report(self)
+  end
+end
+
+class PlainTextFormatter
+  def report context 
+    puts '<plain text>'
+    puts context.name
+    puts '<plain text>'
+  end
+end
+
+class HTMLFormatter
+  def report context
+    puts '<html>'
+    puts '<head>'
+    puts '</head>'
+    puts '<body>'
+    puts context.name
+    puts '</body>'
+    puts '</html>'
+  end
+end
+
+=== Example
+
+user = Users::Base.new('username', HTMLFormatter.new)
+user.report
+
+user = Users::Base.new('username', PlainTextFormatter.new)
+user.report
+
+=== Good code (Ruby way)
+
+class Users::Base
+  def initialize name, &formatter
+    @name = name
+    @formatter = formatter
+  end
+
+  def report
+    formatter.call self
+  end
+end
+
+=== Example
+
+PLAIN_TEXT_FORMATTER = lambda do |context|
+  puts '<plain text>'
+  puts context.name
+  puts '<plain text>'
+end
+
+HTML_FORMATTER = lambda do |context|
+  puts '<html>'
+  puts '<head>'
+  puts '</head>'
+  puts '<body>'
+  puts context.name
+  puts '</body>'
+  puts '</html>'
+end
+
+user = Users::Base.new('username', PLAIN_TEXT_FORMATTER)
+user.report
+
+user = Users::Base.new('username', HTML_FORMATTER)
+user.report
+
