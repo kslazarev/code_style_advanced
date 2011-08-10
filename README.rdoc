@@ -299,3 +299,160 @@ Keeping Up with the Times with the Observer
   > user = Users::Base.new('username', 30000)
   > user.payment = 45000
   => 'username updated'
+
+==Composite
+
+Assembling the Whole from the Parts with the Composite
+
+  class Users::Base < ActiveRecord
+    attr_reader :payment
+
+    def initialize name, payment
+      super()
+      @name = name
+      @payment = payment
+      @children = []
+    end
+
+    def add child
+      @children << child
+    end
+
+    def children
+      @children 
+    end
+  end
+
+  > user_one = Users::Base.new('username', 30000)
+  > user_one.add Users::Base.new('username', 40000)
+  > user_one.add Users::Base.new('username',50000)
+  > user_one.children[0].add Users::Base.new('username', 60000)
+  > 
+  > payment_sum = user_one.payment + user_one.children[0].payment 
+  >   + user_one.children[1].payment + user_one.children[0].children[0].payment
+
+  class UsersComposite < User
+    def payment_sum
+      payment_sum = 0.0
+      @children.each{|child| time += child.payment}
+      payment_sum
+    end
+
+    def << child
+      add child
+    end
+
+    def [] index
+      @children[index]
+    end
+   
+    def []= index, new_child
+      @children[index] = new_child
+  end
+
+  > composite = UsersComposite.new
+  > composite << user_one
+  > payment_sum = composite.payment_sum
+
+==Iterator
+
+Reaching into a Collection with the Iterator
+
+  class ExternalArrayIterator
+    def initialize(array)
+      @array = array
+      @index = 0
+    end
+  
+    def has_next?
+      @index < @array.length
+    end
+   
+    def next_item
+      value = @array[@index]
+      @index += 1
+      value
+    end
+  end
+  
+  >> array = [1,'aaa', Users::Base.new]
+  >> iterator = ExtrenalArrayIterator.new(array)
+  >> while iterator.has_next?
+  >>   iterator.next_item.to_s
+  >> end
+
+  class ArrayIterator < Enumerable
+  end 
+   
+  class InternalArrayIterator
+    def self.for_each_element(array)
+      i = 0
+      while i < array.length
+        yield(array[i])
+        i += 1
+      end 
+    end
+  end
+
+  >> array = [1, 'aaa', Users::Base.new]
+  >> InternalArrayIterator.for_each_element(array){|element| element.to_s}
+
+==Command
+
+Getting Things Done with Commands
+
+  class Users::Administrator < Users::Base
+    def on_action
+      #Maybe get list of all users
+    end
+  end
+
+  class Users::Support < Users::Base
+    def on_action
+      #Maybe get list of all users except administrators
+    end
+  end
+
+  
+  class Users::Base
+    attr_accessor :command
+    
+    def initialize command
+      @command = command
+    end
+
+    def on_action
+      @command.execute if @command
+    end
+  end
+  
+  class UsersListCommand
+    def execute
+    end
+  end
+
+  class UserListExceptAdminsCommand
+    def execute
+    end
+  end
+
+  > Users::Administrator.new(UsersListCommand.new)
+  > Users::Support.new(UserListExceptAdminsCommand.new)
+
+  class Users::Base
+    attr_accessor :command
+    
+    def initialize &block
+      @command = block
+    end
+
+    def on_action
+      @command.call if @command
+    end
+  end
+  
+  > Users::Base.new do 
+  >
+  > end
+
+
